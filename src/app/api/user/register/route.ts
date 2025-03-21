@@ -7,6 +7,14 @@ export const POST = async (req: NextRequest) => {
   try {
     const reqBody = await req.json();
     const { username, email, password } = reqBody;
+
+    if (!username || !email || !password) {
+      return NextResponse.json(
+        { error: "Please enter all fields" },
+        { status: 400 }
+      );
+    }
+
     await connectToDb();
 
     const user = await User.findOne({ email });
