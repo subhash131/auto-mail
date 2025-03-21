@@ -1,7 +1,9 @@
+"use client";
 import Link from "next/link";
 import React from "react";
 import { FcGoogle } from "react-icons/fc";
 import InputField from "./input-field";
+import { signIn } from "next-auth/react";
 
 const AuthForm = ({
   heading,
@@ -16,8 +18,8 @@ const AuthForm = ({
       <p className="text-gray-600 mb-4">{subheading}</p>
 
       <button
-        className="w-full flex items-center justify-center bg-white border rounded-lg py-1 px-4 shadow-sm hover:bg-gray-100 text-gray-700"
-        // onClick={() => signIn("google")}
+        className="w-full flex items-center justify-center bg-white border rounded-lg py-1 px-4 shadow-sm hover:bg-gray-100 text-gray-700 cursor-pointer active:scale-95 transition-transform"
+        onClick={() => signIn("google")}
       >
         <FcGoogle className="mr-2 text-xl" /> Continue with Google
       </button>
