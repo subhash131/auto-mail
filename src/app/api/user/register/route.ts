@@ -6,9 +6,9 @@ import { connectToDb } from "@/db/config";
 export const POST = async (req: NextRequest) => {
   try {
     const reqBody = await req.json();
-    const { username, email, password } = reqBody;
+    const { name, email, password } = reqBody;
 
-    if (!username || !email || !password) {
+    if (!name || !email || !password) {
       return NextResponse.json(
         { error: "Please enter all fields" },
         { status: 400 }
@@ -30,7 +30,7 @@ export const POST = async (req: NextRequest) => {
     const hashedPassword = await bcrypt.hash(password, salt);
 
     const newUser = new User({
-      name: username,
+      name,
       email,
       password: hashedPassword,
     });

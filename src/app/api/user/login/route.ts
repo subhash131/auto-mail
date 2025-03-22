@@ -33,10 +33,14 @@ export const POST = async (req: NextRequest) => {
         { status: 400 }
       );
     }
+    const res = {
+      id: user._id,
+      email: user.email,
+      name: user.name,
+      avatar: user.avatar,
+    };
 
-    await signIn("credentials", { email, password, redirect: false });
-
-    return NextResponse.json({ message: "Logged in!" }, { status: 200 });
+    return NextResponse.json(res, { status: 200 });
   } catch (error) {
     console.error("login failed:", error);
     return NextResponse.json(

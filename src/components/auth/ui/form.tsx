@@ -2,15 +2,32 @@
 import Link from "next/link";
 import React from "react";
 import { FcGoogle } from "react-icons/fc";
-import InputField from "./input-field";
 import { signIn } from "next-auth/react";
+import { SubmitHandler, UseFormHandleSubmit } from "react-hook-form";
+import { LoginFormData } from "../login";
+import { RegisterFormData } from "../register";
 
 const AuthForm = ({
   heading,
   subheading,
+  children,
+  onSubmit,
+  handleSubmit,
+  footer,
 }: {
+  children: React.ReactNode;
   heading: string;
   subheading: string;
+  onSubmit: SubmitHandler<LoginFormData | RegisterFormData>;
+  handleSubmit: UseFormHandleSubmit<
+    RegisterFormData | LoginFormData,
+    undefined
+  >;
+  footer: {
+    text: string;
+    link: string;
+    linkText: string;
+  };
 }) => {
   return (
     <div className="max-w-md bg-white shadow-lg rounded-2xl p-6 border text-center text-sm w-96">
@@ -30,45 +47,14 @@ const AuthForm = ({
         <div className="flex-1 border-t"></div>
       </div>
 
-      <form
-        //   onSubmit={handleSubmit(onSubmit)}
-        className="space-y-4 text-left"
-      >
-        <InputField
-          label="Email Address"
-          type="email"
-          //   error={errors.email?.message}
-          //   register={login("email")}
-        />
-        {/* <Field
-          label="Email Address"
-          type="email"
-          error={errors.email?.message}
-          register={login("email")}
-        />
-        <Field
-          label="Password"
-          type="password"
-          error={errors.password?.message}
-          register={login("password")}
-        />
-        <button
-          type="submit"
-          className="w-full bg-black text-white font-semibold py-2 px-4 rounded-lg flex items-center justify-center active:scale-95 transition-transform disabled:bg-gray-800"
-          disabled={isPending}
-        >
-          {isPending ? (
-            <ImSpinner className="animate-spin h-5 w-5 mr-2" />
-          ) : (
-            "Continue"
-          )}
-        </button> */}
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 text-left">
+        {children}
       </form>
 
       <p className="text-gray-600 mt-4 text-sm">
-        Don't have an account?{" "}
-        <Link href="/auth/register" className="text-blue-600 font-semibold">
-          Sign up
+        {footer.text}
+        <Link href={footer.link} className="text-blue-600 font-semibold">
+          {footer.linkText}
         </Link>
       </p>
     </div>

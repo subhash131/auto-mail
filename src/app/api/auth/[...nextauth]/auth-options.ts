@@ -12,11 +12,12 @@ export const authOptions: NextAuthOptions = {
     CredentialsProvider({
       name: "Credentials",
       credentials: {
-        username: { label: "Email", type: "text", placeholder: "email" },
+        email: { label: "Email", type: "text" },
         password: { label: "Password", type: "password" },
       },
+
       async authorize(credentials) {
-        const res = await fetch("/api/user/login", {
+        const res = await fetch(`${process.env.BASE_URL}/api/user/login`, {
           method: "POST",
           body: JSON.stringify(credentials),
           headers: { "Content-Type": "application/json" },
@@ -45,6 +46,7 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, account, user }) {
       await connectToDb();
+
       let existingUser = await User.findOne({ email: user.email });
 
       if (!existingUser && user && account?.provider === "google") {
@@ -56,7 +58,7 @@ export const authOptions: NextAuthOptions = {
         await existingUser.save();
       }
       if (!existingUser) {
-        throw new Error("User not found.");
+        throw Error("User Not Found");
       }
       token.email = existingUser.email;
       token.name = existingUser.name;
