@@ -20,10 +20,6 @@ export async function middleware(request: NextRequest) {
     req: request,
     secret: process.env.JWT_SECRET,
   });
-
-  console.log({ path });
-  console.log({ token });
-
   if (path.startsWith("/api/auth")) {
     return NextResponse.next();
   }
