@@ -9,6 +9,7 @@ import { registerSchema } from "./schema/register";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
+import { registerUser } from "@/action/user/register";
 
 export type RegisterFormData = {
   email: string;
@@ -18,7 +19,7 @@ export type RegisterFormData = {
 
 const Register = () => {
   const {
-    formState: { errors, isLoading },
+    formState: { errors },
     register,
     handleSubmit,
   } = useForm<RegisterFormData>({
@@ -42,7 +43,9 @@ const Register = () => {
     },
   });
 
-  const onSubmit: SubmitHandler<RegisterFormData> = async (data) => {};
+  const onSubmit: SubmitHandler<RegisterFormData> = async (data) => {
+    mutate(data);
+  };
 
   return (
     <div className="h-screen flex items-center justify-center w-full bg-white text-black">
@@ -75,7 +78,7 @@ const Register = () => {
           error={errors.password?.message}
           register={register("password")}
         />
-        <SubmitButton isLoading={isLoading} />
+        <SubmitButton isLoading={isPending} />
       </AuthForm>
     </div>
   );
