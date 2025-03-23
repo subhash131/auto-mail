@@ -71,8 +71,7 @@ export const authOptions: NextAuthOptions = {
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
       authorization: {
         params: {
-          scope:
-            "openid email profile https://www.googleapis.com/auth/calendar",
+          scope: "openid email profile https://mail.google.com/",
           access_type: "offline",
           prompt: "consent",
         },
@@ -114,7 +113,7 @@ export const authOptions: NextAuthOptions = {
         token.accessTokenExpires = account.expires_at
           ? account.expires_at * 1000
           : Date.now() + 3600 * 1000;
-        token.refreshToken = account.refresh_token!;
+        token.refreshToken = account.refresh_token || token.refreshToken;
       }
 
       if (Date.now() < (token.accessTokenExpires as number)) {
