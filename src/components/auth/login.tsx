@@ -17,7 +17,7 @@ export type LoginFormData = {
 
 const Login = () => {
   const {
-    formState: { errors, isLoading },
+    formState: { errors, isSubmitting },
     register: login,
     handleSubmit,
   } = useForm<LoginFormData>({
@@ -70,7 +70,7 @@ const Login = () => {
           error={errors.password?.message}
           register={login("password")}
         />
-        <SubmitButton isLoading={isLoading} />
+        <SubmitButton isLoading={isSubmitting} />
       </AuthForm>
     </div>
   );
