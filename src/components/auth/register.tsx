@@ -6,9 +6,9 @@ import SubmitButton from "./ui/submit-button";
 import { SubmitHandler, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { registerSchema } from "./schema/register";
-import { signIn } from "next-auth/react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { useMutation } from "@tanstack/react-query";
 
 export type RegisterFormData = {
   email: string;
@@ -26,20 +26,23 @@ const Register = () => {
   });
   const router = useRouter();
 
-  const onSubmit: SubmitHandler<RegisterFormData> = async (data) => {
-    try {
-      const res = await fetch("/api/user/register", {
-        method: "POST",
-        body: JSON.stringify(data),
-      });
-      if (res.ok) {
+  const { mutate, isPending } = useMutation({
+    mutationFn: registerUser,
+    onSuccess: (data) => {
+      if (!data.error) {
+        toast.success(data.message);
+        toast.success("Please check your email to verify your account.");
         router.push("/auth/login");
+      } else {
+        toast.error(data.error);
       }
-      toast.info(JSON.stringify(await res.json()));
-    } catch (error) {
-      toast.error(JSON.stringify(error));
-    }
-  };
+    },
+    onError: () => {
+      toast.error("Failed to create account. Please try again.");
+    },
+  });
+
+  const onSubmit: SubmitHandler<RegisterFormData> = async (data) => {};
 
   return (
     <div className="h-screen flex items-center justify-center w-full bg-white text-black">

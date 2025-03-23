@@ -35,7 +35,7 @@ const AuthForm = ({
       <p className="text-gray-600 mb-4">{subheading}</p>
 
       <button
-        className="w-full flex items-center justify-center bg-white border rounded-lg py-1 px-4 shadow-sm hover:bg-gray-100 text-gray-700 cursor-pointer active:scale-95 transition-transform"
+        className="w-full flex items-center justify-center bg-white border rounded-lg py-1 px-4 shadow-sm hover:bg-gray-100 text-gray-700 cursor-pointer active:scale-95 transition-transform border-gray-200"
         onClick={() => signIn("google")}
       >
         <FcGoogle className="mr-2 text-xl" /> Continue with Google

@@ -6,6 +6,7 @@ import GoogleProvider from "next-auth/providers/google";
 import { google } from "googleapis";
 import User from "@/models/user";
 import { JWT } from "next-auth/jwt";
+import bcrypt from "bcryptjs";
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -17,16 +18,26 @@ export const authOptions: NextAuthOptions = {
       },
 
       async authorize(credentials) {
-        const res = await fetch(`${process.env.BASE_URL}/api/user/login`, {
-          method: "POST",
-          body: JSON.stringify(credentials),
-          headers: { "Content-Type": "application/json" },
-        });
-        const user = await res.json();
-        if (res.ok && user) {
-          return user;
+        if (!credentials?.email || !credentials?.password) {
+          throw new Error("Missing email or password.");
         }
-        return null;
+        const user = await User.findOne({ email: credentials.email });
+        if (!user) {
+          throw new Error("User not found.");
+        }
+        if (!user.password) {
+          throw new Error(
+            "User registered via Google. Please log in with Google."
+          );
+        }
+        const isMatch = await bcrypt.compare(
+          credentials.password,
+          user.password
+        );
+        if (!isMatch) {
+          throw new Error("Invalid credentials.");
+        }
+        return user;
       },
     }),
     GoogleProvider({
