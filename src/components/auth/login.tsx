@@ -35,7 +35,10 @@ const Login = () => {
       });
 
       if (res?.ok) {
-        router.push("/unread");
+        router.push("/email/unread");
+      }
+      if (res?.error) {
+        toast.error("Invalid credentials");
       }
     } catch (error) {
       toast.error(JSON.stringify(error));

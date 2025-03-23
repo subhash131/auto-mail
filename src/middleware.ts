@@ -20,11 +20,14 @@ export async function middleware(request: NextRequest) {
     req: request,
     secret: process.env.JWT_SECRET,
   });
+  if (path === "/email" || path === "/email/") {
+    return NextResponse.redirect(new URL("/email/unread", request.url));
+  }
   if (path.startsWith("/api/auth")) {
     return NextResponse.next();
   }
   if (token && isPublicPath) {
-    return NextResponse.redirect(new URL("/unread", request.url));
+    return NextResponse.redirect(new URL("/email/unread", request.url));
   }
   if (token && !isPublicPath) {
     return NextResponse.next();

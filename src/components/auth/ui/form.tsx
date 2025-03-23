@@ -30,7 +30,7 @@ const AuthForm = ({
   };
 }) => {
   return (
-    <div className="max-w-md bg-white shadow-lg rounded-2xl p-6 border text-center text-sm w-96">
+    <div className="max-w-md bg-white shadow-lg rounded-2xl p-6 border text-center text-sm w-96 border-gray-200">
       <h1 className="text-2xl font-semibold text-gray-900 mb-2">{heading}</h1>
       <p className="text-gray-600 mb-4">{subheading}</p>
 
