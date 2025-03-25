@@ -16,7 +16,7 @@ const Email = () => {
   }, []);
 
   return (
-    <div className="w-full h-screen text-background dark:text-foreground overflow-y-scroll text-wrap px-10">
+    <div className="w-full h-screen text-background dark:text-foreground overflow-y-scroll text-wrap p-2">
       {emails?.map((email) => (
         <Card {...email} key={email.id} />
       ))}
