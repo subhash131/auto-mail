@@ -38,9 +38,9 @@ interface GmailAttachment {
 }
 
 export interface EmailData {
-  id: string; // Thread ID
+  threadId: string; // Thread ID
   subject: string;
-  timestamp: string;
+  lastMessageTimestamp: Date;
   content: string; // Plain text only
   sender: string;
   attachments: GmailAttachment[];
@@ -148,7 +148,7 @@ export async function fetchEmails(): Promise<EmailData[]> {
     const sender =
       headers.find((h) => h.name === "From")?.value || "Unknown Sender";
     const timestamp = latestMessage.internalDate;
-    const timestampReadable = new Date(parseInt(timestamp)).toISOString();
+    const timestampReadable = new Date(parseInt(timestamp));
     const lastMessageId = latestMessage.id;
 
     let combinedContent = "";
@@ -212,12 +212,12 @@ export async function fetchEmails(): Promise<EmailData[]> {
 
     const senderImage = await getSenderImage(sender, accessToken);
 
-    const id = threadData.id;
+    const threadId = threadData.id;
 
     return {
-      id,
+      threadId,
       subject,
-      timestamp: timestampReadable,
+      lastMessageTimestamp: timestampReadable,
       content: combinedContent,
       sender,
       attachments,
