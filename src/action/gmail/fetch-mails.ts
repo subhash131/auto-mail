@@ -11,32 +11,89 @@ interface GmailMessage {
   labelIds: string[];
   payload: {
     headers: { name: string; value: string }[];
-    parts?: { mimeType: string; body: { data: string } }[];
+    parts?: {
+      mimeType: string;
+      filename?: string;
+      body: { attachmentId?: string; data?: string; size: number };
+    }[];
+    body?: { data?: string; size: number };
   };
 }
 
-interface GmailListResponse {
-  messages: { id: string; threadId: string }[];
+export interface GmailThread {
+  id: string;
+  messages: GmailMessage[];
+}
+
+interface GmailThreadsListResponse {
+  threads: { id: string; snippet: string }[];
   nextPageToken?: string;
   resultSizeEstimate: number;
 }
 
+interface GmailAttachment {
+  filename: string;
+  messageId: string;
+  attachmentId: string;
+}
+
 export interface EmailData {
-  sender: string;
+  id: string; // Thread ID
   subject: string;
   timestamp: string;
-  content: string;
-  labels: string[];
-  id: string;
+  content: string; // Plain text only
+  sender: string;
+  attachments: GmailAttachment[];
+  lastMessageId: string;
+  senderImage?: string | null;
 }
 
 // Helper function to decode base64 URL-safe data
-function decodeBase64(base64String: string): string {
-  const buff = Buffer.from(base64String, "base64");
-  return buff.toString("utf-8");
+export async function decodeBase64(base64String: string): Promise<string> {
+  try {
+    const buff = Buffer.from(
+      base64String.replace(/-/g, "+").replace(/_/g, "/"),
+      "base64"
+    );
+    return buff.toString("utf-8");
+  } catch (error) {
+    console.warn(`Base64 decoding failed: ${error}`);
+    return "";
+  }
 }
 
-// Main function to fetch unread Primary emails
+// Fetch sender profile image from Google People API
+async function getSenderImage(
+  email: string,
+  accessToken: string
+): Promise<string | null> {
+  try {
+    const response = await fetch(
+      `https://people.googleapis.com/v1/people:searchContacts?query=${encodeURIComponent(
+        email
+      )}&readMask=photos`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      }
+    );
+    if (!response.ok) {
+      console.warn(`People API failed for ${email}: ${response.statusText}`);
+      return null;
+    }
+    const data = await response.json();
+    if (data.people?.length > 0 && data.people[0].photos?.length > 0) {
+      return data.people[0].photos[0].url || null;
+    }
+    return null;
+  } catch (error) {
+    console.warn(`Error fetching sender image for ${email}: ${error}`);
+    return null;
+  }
+}
+
+// Fetch unread Primary email threads with plain text only
 export async function fetchEmails(): Promise<EmailData[]> {
   const session = await getServerSession(authOptions);
   if (!session?.accessToken) {
@@ -45,9 +102,8 @@ export async function fetchEmails(): Promise<EmailData[]> {
 
   const accessToken = session.accessToken;
 
-  // Step 1: Fetch list of unread Primary emails (max 20)
   const listResponse = await fetch(
-    "https://gmail.googleapis.com/gmail/v1/users/me/messages?labelIds=INBOX&labelIds=UNREAD&q=-category:promotions -category:social -category:updates -category:forums&maxResults=20",
+    "https://gmail.googleapis.com/gmail/v1/users/me/threads?labelIds=INBOX&labelIds=UNREAD&q=-category:promotions -category:social -category:updates -category:forums&maxResults=20",
     {
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -56,20 +112,19 @@ export async function fetchEmails(): Promise<EmailData[]> {
   );
 
   if (!listResponse.ok) {
-    throw new Error(`Failed to fetch email list: ${listResponse.statusText}`);
+    throw new Error(`Failed to fetch thread list: ${listResponse.statusText}`);
   }
 
-  const listData: GmailListResponse = await listResponse.json();
-  const messages = listData.messages || [];
+  const listData: GmailThreadsListResponse = await listResponse.json();
+  const threads = listData.threads || [];
 
-  if (messages.length === 0) {
+  if (threads.length === 0) {
     return [];
   }
 
-  // Step 2: Fetch details for each message
-  const emailPromises = messages.map(async (message) => {
-    const messageResponse = await fetch(
-      `https://gmail.googleapis.com/gmail/v1/users/me/messages/${message.id}?format=full`,
+  const threadPromises = threads.map(async (thread) => {
+    const threadResponse = await fetch(
+      `https://gmail.googleapis.com/gmail/v1/users/me/threads/${thread.id}?format=full`,
       {
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -77,51 +132,99 @@ export async function fetchEmails(): Promise<EmailData[]> {
       }
     );
 
-    if (!messageResponse.ok) {
+    if (!threadResponse.ok) {
       throw new Error(
-        `Failed to fetch message ${message.id}: ${messageResponse.statusText}`
+        `Failed to fetch thread ${thread.id}: ${threadResponse.statusText}`
       );
     }
 
-    const msg: GmailMessage = await messageResponse.json();
+    const threadData: GmailThread = await threadResponse.json();
+    const messages = threadData.messages || [];
 
-    // Extract headers
-    const id = msg.id;
-    const headers = msg.payload.headers || [];
+    const latestMessage = messages[messages.length - 1];
+    const headers = latestMessage.payload.headers || [];
     const subject =
       headers.find((h) => h.name === "Subject")?.value || "No Subject";
     const sender =
       headers.find((h) => h.name === "From")?.value || "Unknown Sender";
-    const timestamp = msg.internalDate; // Unix timestamp in milliseconds
-
-    // Convert timestamp to readable format
+    const timestamp = latestMessage.internalDate;
     const timestampReadable = new Date(parseInt(timestamp)).toISOString();
+    const lastMessageId = latestMessage.id;
 
-    // Get content (snippet or full body)
-    let content = msg.snippet || "No content preview";
-    if (msg.payload.parts) {
-      const plainTextPart = msg.payload.parts.find(
-        (part) => part.mimeType === "text/plain"
-      );
-      if (plainTextPart && plainTextPart.body.data) {
-        content = decodeBase64(plainTextPart.body.data);
+    let combinedContent = "";
+    const attachments: GmailAttachment[] = [];
+
+    for (const msg of messages) {
+      const msgHeaders = msg.payload.headers || [];
+      const msgSender =
+        msgHeaders.find((h) => h.name === "From")?.value || "Unknown Sender";
+      const msgTimestamp = new Date(parseInt(msg.internalDate)).toISOString();
+
+      let messageContent = "";
+      if (msg.payload.parts) {
+        const plainTextPart = msg.payload.parts.find(
+          (part) => part.mimeType === "text/plain"
+        );
+        if (plainTextPart && plainTextPart.body.data) {
+          messageContent = await decodeBase64(plainTextPart.body.data);
+        } else {
+          console.warn(
+            `No text/plain part found for message ${msg.id}, falling back to snippet`
+          );
+          messageContent = msg.snippet || "No content preview"; // Snippet is plain text
+        }
+      } else if (msg.payload.body && msg.payload.body.data) {
+        // Check if it looks like HTML; if so, use snippet instead
+        const decodedBody = await decodeBase64(msg.payload.body.data);
+        if (decodedBody.includes("<") && decodedBody.includes(">")) {
+          console.warn(
+            `Message ${msg.id} body appears to be HTML, using snippet instead`
+          );
+          messageContent = msg.snippet || "No content preview";
+        } else {
+          messageContent = decodedBody;
+        }
+      } else {
+        console.warn(
+          `No content available for message ${msg.id}, using snippet`
+        );
+        messageContent = msg.snippet || "No content preview";
+      }
+
+      combinedContent +=
+        (combinedContent ? "\n---\n" : "") +
+        `From: ${msgSender}\nDate: ${msgTimestamp}\nContent:\n${messageContent}`;
+
+      if (msg.payload.parts) {
+        for (const part of msg.payload.parts) {
+          if (part.filename && part.body.attachmentId) {
+            attachments.push({
+              filename: part.filename,
+              messageId: msg.id,
+              attachmentId: part.body.attachmentId,
+            });
+          }
+        }
       }
     }
 
-    // Include labels
-    const labels = msg.labelIds || [];
+    attachments.reverse();
+
+    const senderImage = await getSenderImage(sender, accessToken);
+
+    const id = threadData.id;
 
     return {
       id,
-      sender,
       subject,
       timestamp: timestampReadable,
-      content,
-      labels,
+      content: combinedContent,
+      sender,
+      attachments,
+      lastMessageId,
+      senderImage,
     };
   });
 
-  // Wait for all email details to be fetched
-  const emails = await Promise.all(emailPromises);
-  return emails;
+  return await Promise.all(threadPromises);
 }
